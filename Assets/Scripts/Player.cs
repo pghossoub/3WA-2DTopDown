@@ -14,10 +14,10 @@ public class Player : MonoBehaviour
     }
 
     #region Serialized
-    #pragma warning disable CS0649
+#pragma warning disable CS0649
     [SerializeField]
     private float _speed;
-    #pragma warning restore CS0649
+#pragma warning restore CS0649
     #endregion
 
     private Rigidbody2D _rb;
@@ -26,6 +26,7 @@ public class Player : MonoBehaviour
     private float _vertical;
     private State _state;
     private Vector2 _lastDirection;
+    private float _speedModif = 1.0f;
 
 
     private void Awake()
@@ -39,6 +40,8 @@ public class Player : MonoBehaviour
         switch (_state)
         {
             case (State.IDLE):
+                _anim.SetBool(Animator.StringToHash("IsSprinting"), false);
+                _speedModif = 1.0f;
                 Move();
                 break;
 
@@ -47,7 +50,8 @@ public class Player : MonoBehaviour
                 SaveLastDirection();
                 Stop();
 
-                //Roll();
+                Roll();
+                Sprint();
                 break;
 
             case (State.SPRINTING):
@@ -59,12 +63,24 @@ public class Player : MonoBehaviour
                 break;
         }
     }
-
-    private static void Roll()
+    private void Sprint()
+    {
+        if (Input.GetButton("Fire1"))
+        {
+            _anim.SetBool(Animator.StringToHash("IsSprinting"), true);
+            _speedModif = 1.3f;
+        }
+        else
+        {
+            _anim.SetBool(Animator.StringToHash("IsSprinting"), false);
+            _speedModif = 1.0f;
+        }
+    }
+    private void Roll()
     {
         if (Input.GetButtonDown("Fire1"))
         {
-            Debug.Log("Roll");
+            _anim.SetTrigger(Animator.StringToHash("Roll"));
         }
     }
 
@@ -84,6 +100,7 @@ public class Player : MonoBehaviour
 
     private void SaveLastDirection()
     {
+        //METHODE1
         /*if (_horizontal != 0 || _vertical != 0)
         {
             _lastDirection = new Vector2(_horizontal, _vertical);
@@ -91,15 +108,31 @@ public class Player : MonoBehaviour
             _anim.SetFloat(Animator.StringToHash("LastY"), _lastDirection.y);
         }*/
 
+        //METHODE2
+
         _lastDirection = new Vector2(_horizontal, _vertical);
-
-
         if (_lastDirection.sqrMagnitude > 0.5)
         {
             _lastDirection = NormalizeVector(_lastDirection);
             _anim.SetFloat(Animator.StringToHash("LastX"), _lastDirection.x);
             _anim.SetFloat(Animator.StringToHash("LastY"), _lastDirection.y);
         }
+
+        //METHODE3, ne marche pas encore
+        /*
+        Vector2 direction = new Vector2(_horizontal, _vertical);
+
+
+        if (_lastDirection.sqrMagnitude > 0.5)
+        {
+            if (direction.sqrMagnitude >= _lastDirection.sqrMagnitude)
+            {
+                _lastDirection = direction;
+                _lastDirection = NormalizeVector(_lastDirection);
+                _anim.SetFloat(Animator.StringToHash("LastX"), _lastDirection.x);
+                _anim.SetFloat(Animator.StringToHash("LastY"), _lastDirection.y);
+            }
+        }*/
 
     }
 
@@ -128,12 +161,14 @@ public class Player : MonoBehaviour
 
     private void FixedUpdate()
     {
-        _rb.velocity = new Vector2(_horizontal * _speed * Time.fixedDeltaTime,
-            _vertical * _speed * Time.fixedDeltaTime);
+        _rb.velocity = new Vector2(_horizontal * _speed * _speedModif * Time.fixedDeltaTime,
+            _vertical * _speed * _speedModif * Time.fixedDeltaTime);
     }
 
+#if UNITY_EDITOR
     void OnGUI()
     {
         GUI.Button(new Rect(10, 10, 120, 30), $"State: {_state}");
     }
+#endif
 }
